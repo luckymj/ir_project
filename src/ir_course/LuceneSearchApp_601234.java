@@ -49,21 +49,6 @@ public class LuceneSearchApp_601234 {
 		Directory directory = FSDirectory.open(Paths.get("index"));
 
 		IndexWriterConfig config = new IndexWriterConfig(analyzer);
-		config.setOpenMode(OpenMode.CREATE);
-		
-		
-		//System.out.println("RSSFeedDocs: " + docs.size());
-		
-//		for (DocumentInCollection documentdoc : docs) {
-//			Document doc = new Document();
-//			doc.add(new Field("Title", documentdoc.getTitle(), TextField.TYPE_STORED));
-//			doc.add(new Field("abstractText", documentdoc.getAbstractText(), TextField.TYPE_STORED));
-//			doc.add(new Field("searchTaskNumber", Integer.toString(documentdoc.getSearchTaskNumber()), TextField.TYPE_STORED));
-//			doc.add(new Field("query", documentdoc.getQuery(), TextField.TYPE_STORED));
-//			//doc.add(new Field("publication", DateTools.dateToString(documentdoc.getPubDate(), Resolution.DAY), TextField.TYPE_STORED));
-//			//System.out.println(documentdoc.getTitle() + " " + DateTools.dateToString(documentdoc.getPubDate(), Resolution.DAY));
-//			iwriter.addDocument(doc);
-//		}
 		
 
 		//VSM + stopwords + stemmer
@@ -76,13 +61,15 @@ public class LuceneSearchApp_601234 {
 		// Standard analyzer : stop words - porter stemmer
 		
 
+		config.setOpenMode(OpenMode.CREATE);
 		IndexWriter iwriter = new IndexWriter(directory, config);
 
         int doccount = 0;
         for (DocumentInCollection documentdoc : docs) {
             Document doc = new Document();
-			doc.add(new Field("Title", documentdoc.getTitle(), TextField.TYPE_STORED));
+			doc.add(new Field("title", documentdoc.getTitle(), TextField.TYPE_STORED));
 			doc.add(new Field("abstractText", documentdoc.getAbstractText(), TextField.TYPE_STORED));
+			doc.add(new Field("search_task_number", Integer.toString(documentdoc.getSearchTaskNumber()), TextField.TYPE_STORED));
             iwriter.addDocument(doc);
             doccount++;
         }		
@@ -96,6 +83,7 @@ public class LuceneSearchApp_601234 {
 	public List<String> search(String searchQuery, IndexWriterConfig cf) throws IOException, ParseException {
 
 		System.out.print("searchQuery: " + searchQuery);
+		System.out.println("");
 		
 		QueryParser qp = new QueryParser("abstractText", cf.getAnalyzer());
 		Query stemmedQuery = null;
@@ -104,6 +92,14 @@ public class LuceneSearchApp_601234 {
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
+		
+		BooleanQuery.Builder booleanQuery = new BooleanQuery.Builder();
+		
+		// search only documents with task number 9
+		booleanQuery.add(new TermQuery(new Term("search_task_number", "9")), BooleanClause.Occur.MUST);
+		booleanQuery.add(stemmedQuery, BooleanClause.Occur.MUST);
+		
+		System.out.println(stemmedQuery.getClass().getSimpleName());
 		
 		List<String> results = new LinkedList<String>();
 
@@ -115,93 +111,19 @@ public class LuceneSearchApp_601234 {
 		
 		isearcher.setSimilarity(cf.getSimilarity());
 		
-		TopDocs docs = isearcher.search(stemmedQuery, 10);
+		TopDocs docs = isearcher.search(booleanQuery.build(), 10);
 		ScoreDoc[] scored = docs.scoreDocs;
 		
 		for (ScoreDoc aDoc : scored) {
 			Document d = isearcher.doc(aDoc.doc);
-			results.add("+ " + d.get("title") + " | abstractText: " + d.get("abstractText") + " | score: " + aDoc.score);
+			results.add("score: " + aDoc.score + " | title: " + d.get("title") + " | abstractText: " + d.get("abstractText"));
 		}
-
-//		BooleanQuery.Builder booleanQuery = new BooleanQuery.Builder();
-//		
-//		if ( inAbstractText != null && !inAbstractText.isEmpty() ) {
-//			for (String key_abstractText : inAbstractText) {
-//				booleanQuery.add(new TermQuery(new Term("abstractText", key_abstractText)), BooleanClause.Occur.MUST);
-//			}
-//		}
-//				
-//		if ( notInTitle != null && !notInTitle.isEmpty() ) {
-//			for (String key_nottitle : notInTitle) {
-//				booleanQuery.add(new TermQuery(new Term("Title", key_nottitle)), BooleanClause.Occur.MUST_NOT);
-//			}
-//		}
-//		
-//		if ( inDescription != null && !inDescription.isEmpty() ) {
-//			for (String key_description : inDescription) {
-//				booleanQuery.add(new TermQuery(new Term("description", key_description)), BooleanClause.Occur.MUST);
-//			}
-//		}
-//				
-//		if ( notInDescription != null && !notInDescription.isEmpty() ) {
-//			for (String key_notdescription : notInDescription) {
-//				booleanQuery.add(new TermQuery(new Term("description", key_notdescription)), BooleanClause.Occur.MUST_NOT);
-//			}
-//		}
-		
-		//System.out.println("2008-11-12".replace("-", ""));
-		
-		//booleanQuery.add(new TermRangeQuery("publication", startDate == null ? null : new BytesRef(startDate.replace("-", "")), endDate == null ? null : new BytesRef(endDate.replace("-", "")), true, true), BooleanClause.Occur.MUST);
-		
-		
-		//System.out.println("Query: " + booleanQuery.build().toString());
-//		ScoreDoc[] hits = isearcher.search(booleanQuery.build(), 1000).scoreDocs;	
-//		for (int i = 0; i < hits.length; i++) {
-//			Document hitDoc = isearcher.doc(hits[i].doc);
-//			String feedTitle = hitDoc.get("Title");
-//			results.add(feedTitle);
-//		}
-
-
 		
 		ireader.close();
 		
 		return results;
 	}
-	
-//	public void printQuery(List<String> inAbstractText) {
-//		System.out.print("Search (");
-//		if (inAbstractText != null) {
-//			System.out.print("in abstractText: "+inAbstractText);
-//			if (notInTitle != null || inDescription != null || notInDescription != null || startDate != null || endDate != null)
-//				System.out.print("; ");
-//		}
-//		if (notInTitle != null) {
-//			System.out.print("not in title: "+notInTitle);
-//			if (inDescription != null || notInDescription != null || startDate != null || endDate != null)
-//				System.out.print("; ");
-//		}
-//		if (inDescription != null) {
-//			System.out.print("in description: "+inDescription);
-//			if (notInDescription != null || startDate != null || endDate != null)
-//				System.out.print("; ");
-//		}
-//		if (notInDescription != null) {
-//			System.out.print("not in description: "+notInDescription);
-//			if (startDate != null || endDate != null)
-//				System.out.print("; ");
-//		}
-//		if (startDate != null) {
-//			System.out.print("startDate: "+startDate);
-//			if (endDate != null)
-//				System.out.print("; ");
-//		}
-//		if (endDate != null)
-//			System.out.print("endDate: "+endDate);
-//		
-//		System.out.println("):");
-//	}
-	
+		
 	public void printResults(List<String> results) {
 		if (results.size() > 0) {
 			Collections.sort(results);
