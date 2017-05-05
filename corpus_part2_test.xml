@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results>
+  <item>
+    <title>Email Spam Filtering: A Systematic Review</title>
+	<abstract>Spam is information crafted to be delivered to a large number of recipients.</abstract>
+	<search_task_number>12</search_task_number>
+	<query>comparison spam filtering methods</query>
+	<relevance>1</relevance>
+  </item>
+
+  <item>
+    <title>Investigation and a practical compact</title>
+	<abstract>This paper first investigates the non-uniform spatial thermal</abstract>
+	<search_task_number>8</search_task_number>
+	<query>computer and physical model simulation</query>
+	<relevance>1</relevance>
+  </item>
+  
+<item>
+	<title>The Energy speech</title>
+	<abstract>This paper describes a new embedded networked sensor platform</abstract>
+	<search_task_number>19</search_task_number>
+	<query>power sensor saving energy</query>
+	<relevance>0</relevance>
+</item>
+  <item>
+    <title>
+      The Language Grid
+    </title>
+    <abstract>
+      There is increasing interaction among communities with multiple languages
+    </abstract>
+    <search_task_number>
+      10
+    </search_task_number>
+    <query>
+      intercultural software development
+    </query>
+    <relevance>
+      1
+    </relevance>
+  </item>
+  <item>
+    <title>the speech recognition</title>
+    <abstract>the speech recognition of speech signal.</abstract>
+    <search_task_number>9</search_task_number>
+    <query>speech recognition hidden markov model</query>
+    <relevance>1</relevance>
+  </item>
+  <item>
+    <title>speech recognition</title>
+    <abstract>speech recognition with continuous observation densities.</abstract>
+    <search_task_number>9</search_task_number>
+    <query>speech recognition hidden markov model</query>
+    <relevance>1</relevance>
+  </item>
+  <item>
+    <title>the speech recognitions</title>
+    <abstract>the speech recognitions based on Hidden Markov Model (HMM)</abstract>
+    <search_task_number>9</search_task_number>
+    <query>speech recognition hidden markov model</query>
+    <relevance>0</relevance>
+  </item>
+  <item>
+    <title>Speech Recognition</title>
+    <abstract>Speech Recognition in this paper.</abstract>
+    <search_task_number>9</search_task_number>
+    <query>speech recognition hidden markov model</query>
+    <relevance>1</relevance>
+  </item>
+</results>
