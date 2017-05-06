@@ -34,12 +34,25 @@ import org.apache.lucene.util.BytesRef;
 
 
 public class LuceneSearchApp_group9 {
+
+	int all_doc_num = 0;
+	int rel_doc_num = 0;
+	int rel_doc_result = 0;
+	
+	static String[] analyze_modes = {
+		"vsm_Stop_NoStem",
+		"vsm_NoStop_PorterStem",
+		"vsm_Stop_PorterStem",
+		"bm25_Stop_NoStem",
+		"bm25_NoStop_PorterStem",
+		"bm25_Stop_PorterStem"
+	};
 	
 	public LuceneSearchApp_group9() {
 
 	}
 	
-	public IndexWriterConfig index(List<DocumentInCollection> docs) throws IOException {
+	public IndexWriterConfig index(List<DocumentInCollection> docs, String analyzeMode) throws IOException {
 
 		// Add the document to the index
 		Analyzer analyzer = new StandardAnalyzer();
@@ -64,47 +77,53 @@ public class LuceneSearchApp_group9 {
 		- StandardAnalyzer   :       [quick] [brown] [fox] [jumped] [over]       [lazy] [dog]
 */		
 
-		// VSM with Porter stemmer and stop words
-//		CharArraySet stopWords = EnglishAnalyzer.getDefaultStopSet(); //EnglishAnalyzer already has a stemmer
-//		analyzer = new EnglishAnalyzer(stopWords);
-//		config = new IndexWriterConfig(analyzer);
-//      	config.setSimilarity(new ClassicSimilarity());
-        
-        
-		// VSM with Porter stemmer and no stop words
-//		analyzer = new EnglishAnalyzer(CharArraySet.EMPTY_SET);
-//      config = new IndexWriterConfig(analyzer);
-//      config.setSimilarity(new ClassicSimilarity());
-        
-        
-		// VSM with stop words and no stemmer
-		CharArraySet stopWords = StandardAnalyzer.STOP_WORDS_SET; // Standard analyzer : + stop words - stemmer
-		analyzer = new StandardAnalyzer(stopWords);
-		config = new IndexWriterConfig(analyzer);
-		config.setSimilarity(new ClassicSimilarity());
-       
-        
-		//BM25 with Porter stemmer and stop words
-//		CharArraySet stopWords = EnglishAnalyzer.getDefaultStopSet();
-//		analyzer = new EnglishAnalyzer(stopWords);
-//		config = new IndexWriterConfig(analyzer);
-//		config.setSimilarity(new BM25Similarity());	
-        
-        
-		//BM25 with Porter stemmer and no stop words
-//		analyzer = new EnglishAnalyzer(CharArraySet.EMPTY_SET);
-//		config = new IndexWriterConfig(analyzer);
-//		config.setSimilarity(new BM25Similarity());
+		CharArraySet stopWords;
 		
-		
-		//BM25 with stop words and no stemmer
-//		CharArraySet stopWords = StandardAnalyzer.STOP_WORDS_SET; // Standard analyzer : + stop words - stemmer
-//		analyzer = new StandardAnalyzer(stopWords);
-//		config = new IndexWriterConfig(analyzer);
-//      config.setSimilarity(new BM25Similarity());		
-		
-		
+		switch(analyzeMode) {
+		case "vsm_Stop_NoStem":
+			// VSM with stop words and no stemmer
+			stopWords = StandardAnalyzer.STOP_WORDS_SET; // Standard analyzer : + stop words - stemmer
+			analyzer = new StandardAnalyzer(stopWords);
+			config = new IndexWriterConfig(analyzer);
+			config.setSimilarity(new ClassicSimilarity());
+			break;
+		case "vsm_NoStop_PorterStem":
+			// VSM with Porter stemmer and no stop words
+			analyzer = new EnglishAnalyzer(CharArraySet.EMPTY_SET);
+			config = new IndexWriterConfig(analyzer);
+			config.setSimilarity(new ClassicSimilarity());
+			break;
+		case "vsm_Stop_PorterStem":
+			// VSM with Porter stemmer and stop words
+			stopWords = EnglishAnalyzer.getDefaultStopSet(); //EnglishAnalyzer already has a stemmer
+			analyzer = new EnglishAnalyzer(stopWords);
+			config = new IndexWriterConfig(analyzer);
+			config.setSimilarity(new ClassicSimilarity());
+			break;
+		case "bm25_Stop_NoStem":
+			//BM25 with stop words and no stemmer
+			stopWords = StandardAnalyzer.STOP_WORDS_SET; // Standard analyzer : + stop words - stemmer
+			analyzer = new StandardAnalyzer(stopWords);
+			config = new IndexWriterConfig(analyzer);
+			config.setSimilarity(new BM25Similarity());				
+			break;
+		case "bm25_NoStop_PorterStem":
+			//BM25 with Porter stemmer and no stop words
+			analyzer = new EnglishAnalyzer(CharArraySet.EMPTY_SET);
+			config = new IndexWriterConfig(analyzer);
+			config.setSimilarity(new BM25Similarity());
+			break;
+		case "bm25_Stop_PorterStem":
+			//BM25 with Porter stemmer and stop words
+			stopWords = EnglishAnalyzer.getDefaultStopSet();
+			analyzer = new EnglishAnalyzer(stopWords);
+			config = new IndexWriterConfig(analyzer);
+			config.setSimilarity(new BM25Similarity());			
+			break;
+		}
 
+        
+       
 		config.setOpenMode(OpenMode.CREATE);
 		IndexWriter iwriter = new IndexWriter(directory, config);
 
@@ -114,9 +133,25 @@ public class LuceneSearchApp_group9 {
 			doc.add(new Field("title", documentdoc.getTitle(), TextField.TYPE_STORED));
 			doc.add(new Field("abstractText", documentdoc.getAbstractText(), TextField.TYPE_STORED));
 			doc.add(new Field("search_task_number", Integer.toString(documentdoc.getSearchTaskNumber()), TextField.TYPE_STORED));
-			doc.add(new Field("relevance", Boolean.toString(documentdoc.isRelevant()), TextField.TYPE_STORED));
+
+			// Set relevance "1" if it is in comparison scenario 9
+			if ( documentdoc.isRelevant() && documentdoc.getSearchTaskNumber() == 9 )
+			{
+				doc.add(new Field("relevance", "1", TextField.TYPE_STORED));	
+	            rel_doc_num++;
+			}
+			else
+			{
+				doc.add(new Field("relevance", "0", TextField.TYPE_STORED));				
+			}
+			
             iwriter.addDocument(doc);
+            all_doc_num++;
         }		
+
+		// Print total number of docs
+		System.out.println("number of total docs: " + all_doc_num);
+		System.out.println("number of relevant docs: " + rel_doc_num);
 		
 		iwriter.close();
 		directory.close();
@@ -127,8 +162,7 @@ public class LuceneSearchApp_group9 {
 	public List<String> search(String searchQuery, IndexWriterConfig cf) throws IOException, ParseException {
 
 		// Print search query
-		System.out.print("searchQuery: " + searchQuery);
-		System.out.println("");
+		System.out.println("searchQuery: " + searchQuery);
 		
 		// Search query in abstract field
 		QueryParser qp = new QueryParser("abstractText", cf.getAnalyzer());
@@ -156,14 +190,24 @@ public class LuceneSearchApp_group9 {
 		
 		isearcher.setSimilarity(cf.getSimilarity());
 		
-		TopDocs docs = isearcher.search(booleanQuery.build(), 1000);
+		int topK = 10;
+		
+		TopDocs docs = isearcher.search(booleanQuery.build(), topK);
 		ScoreDoc[] scored = docs.scoreDocs;
 		
+		rel_doc_result = 0;
 		// Save the results
 		for (ScoreDoc aDoc : scored) {
 			Document d = isearcher.doc(aDoc.doc);
 			results.add("score: " + aDoc.score + " | relevance: " + d.get("relevance") + " | title: " + d.get("title") + " | abstractText: " + d.get("abstractText"));
+			
+			if ( new String(d.get("relevance")).equals("1"))
+			{
+				rel_doc_result++;
+			}
 		}
+		
+		System.out.println("result number of total docs: " + rel_doc_result);
 		
 		ireader.close();
 		
@@ -184,19 +228,31 @@ public class LuceneSearchApp_group9 {
 		if (args.length > 0) {
 			LuceneSearchApp_group9 engine = new LuceneSearchApp_group9();
 			
+			// Read document collection 
 			DocumentCollectionParser parser = new DocumentCollectionParser();
 			parser.parse(args[0]);
 			List<DocumentInCollection> docs = parser.getDocuments();
 				
-			IndexWriterConfig cf = engine.index(docs);
 
-			List<String> results;
-			
 			// testing query for stemming and stopwords (test with => corpus_part2_test.xml)
-			results = engine.search("the speech recognitions", cf);
+			String[] queryset = { "the speech recognitions"};			
 			
-			// Display the results
-			engine.printResults(results);
+			
+			for (String mode : analyze_modes)
+			{
+				System.out.println("analyze mode: " + mode);
+				IndexWriterConfig cf = engine.index(docs, mode);
+				for (String query : queryset)
+				{
+					List<String> results;
+					results = engine.search(query, cf);
+					// Display the results
+					engine.printResults(results);
+					
+				}				
+				System.out.println("");
+			}
+
 			
 		}
 		else
