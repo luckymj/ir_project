@@ -1,10 +1,12 @@
 package ir_course;
 
+import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -23,7 +25,7 @@ public class LuceneSearchApp_group9 {
 
 	int allDocumentsNumber = 0;
 	int relevantDocumentsNumber = 0;
-	int relevantDocumentsResult = 0;
+	int totalRelevantDocuments = 0;
 	
 	static String[] analyzeModes = {
 		"vsm_Stop_NoStem",
@@ -164,23 +166,45 @@ public class LuceneSearchApp_group9 {
 		
 		isearcher.setSimilarity(cf.getSimilarity());
 		
-		int topK = 10;
+		int topK = 3000;
 		TopDocs docs = isearcher.search(booleanQuery.build(), topK);
 		ScoreDoc[] scored = docs.scoreDocs;
 		
-		relevantDocumentsResult = 0;
+		totalRelevantDocuments = 0;
 		
 		// Save the results
 		for (ScoreDoc aDoc : scored) {
 			Document d = isearcher.doc(aDoc.doc);
-			results.add("score: " + aDoc.score + " | relevance: " + d.get("relevance") + " | title: " + d.get("title") + " | abstractText: " + d.get("abstractText"));
+			//results.add("score: " + aDoc.score + " | relevance: " + d.get("relevance") + " | title: " + d.get("title") + " | abstractText: " + d.get("abstractText"));
 			
 			if (d.get("relevance").equals("1")) {
-				relevantDocumentsResult++;
+				totalRelevantDocuments++;
 			}
 		}
 		
-		System.out.println("result number of total docs: " + relevantDocumentsResult);
+		System.out.println("result number of total docs: " + totalRelevantDocuments);
+		
+		int relevantDocumentsResult = 0;
+		int nonRelevantDocumentsResult = 0;
+		List<Point2D> precisionRecall = new LinkedList<Point2D>();
+		
+		for (ScoreDoc aDoc : scored) {
+			Document d = isearcher.doc(aDoc.doc);
+			
+			if (isearcher.doc(aDoc.doc).get("relevance").equals("1")) {
+				relevantDocumentsResult++;
+			} else {
+				nonRelevantDocumentsResult++;
+			}
+			
+			Double recall = relevantDocumentsResult / (double) totalRelevantDocuments;
+			Double precision = relevantDocumentsResult / (double) (relevantDocumentsResult + nonRelevantDocumentsResult);
+			Point2D point = new Point2D.Double(recall, precision);
+			precisionRecall.add(point);
+			
+			System.out.println("score: " + aDoc.score + " | relevance: " + d.get("relevance") + " | title: " + d.get("title") + " | abstractText: " + d.get("abstractText"));
+			System.out.println("Recall: " + point.getX() + " | Precision: " + point.getY());
+		}
 		
 		ireader.close();
 		return results;
