@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -186,8 +187,11 @@ public class LuceneSearchApp_group9 {
 		System.out.println("result number of total docs: " + totalRelevantDocuments);
 
 		List<Point2D> precisionRecall = getPrecisionRecall(isearcher, scoredDocuments);
-		printPrecisionRecallInterpolated(precisionRecall);
+		List<Point2D> precisionRecallInterpolated = getPrecisionRecallInterpolated(precisionRecall);
+		List<Point2D> precisionRecallElevenPointAverage = getPrecisionRecallElevenPointAverage(precisionRecallInterpolated);
 
+		printPrecisionRecall(precisionRecallElevenPointAverage);
+		
 		ireader.close();
 		return results;
 	}
@@ -197,7 +201,7 @@ public class LuceneSearchApp_group9 {
 		int nonRelevantDocumentsResult = 0;
 		List<Point2D> precisionRecall = new LinkedList<Point2D>();
 
-		System.out.println("R\tP");
+		//System.out.println("R\tP");
 		
 		for (ScoreDoc aDoc : scoredDocuments) {
 			if (isearcher.doc(aDoc.doc).get("relevance").equals("1")) {
@@ -211,14 +215,14 @@ public class LuceneSearchApp_group9 {
 			Point2D point = new Point2D.Double(recall, precision);
 			precisionRecall.add(point);
 
-			DecimalFormat formatter = new DecimalFormat("#0.0000");
-			System.out.println(formatter.format(point.getX()) + "\t" + formatter.format(point.getY()));
+			//DecimalFormat formatter = new DecimalFormat("#0.0000");
+			//System.out.println(formatter.format(point.getX()) + "\t" + formatter.format(point.getY()));
 		}
 		
 		return precisionRecall;
 	}
 	
-	public void printPrecisionRecallInterpolated(List<Point2D> precisionRecall) throws IOException {
+	public List<Point2D> getPrecisionRecallInterpolated(List<Point2D> precisionRecall) throws IOException {
 		List<Point2D> precisionRecallInterpolated = new LinkedList<>();
 		ListIterator<Point2D> iterator = precisionRecall.listIterator(precisionRecall.size() - 1);
 
@@ -230,8 +234,28 @@ public class LuceneSearchApp_group9 {
 			}
 		}
 		
-		System.out.println("\nInterpolated results:");
-		printPrecisionRecall(precisionRecallInterpolated);
+		return precisionRecallInterpolated;
+	}
+	
+	public List<Point2D> getPrecisionRecallElevenPointAverage(List<Point2D> precisionRecallInterpolated) {
+		List<Point2D> precisionRecallElevenPointAverage = new LinkedList<>();
+		Iterator<Point2D> iterator = precisionRecallInterpolated.iterator();
+		
+		Point2D point = iterator.next();
+
+		for (int i = 0; i < 11;) {
+			double x = i / 10.d;
+
+			if (point.getX() >= x || !iterator.hasNext()) {
+				Point2D averagePoint = new Point2D.Double(x, point.getY());
+				precisionRecallElevenPointAverage.add(averagePoint);
+				i++;
+			} else {
+				point = iterator.next();
+			}
+		}
+		
+		return precisionRecallElevenPointAverage;
 	}
 	
 	public void printPrecisionRecall(List<Point2D> precisionRecall) {
@@ -264,7 +288,7 @@ public class LuceneSearchApp_group9 {
 			List<DocumentInCollection> docs = parser.getDocuments();
 
 			// testing query for stemming and stopwords (test with => corpus_part2_test.xml)
-			String[] queryset = { "speech recognition algorithm", "natural language speech recognition", "speech to text" };
+			String[] queryset = { "speech recognition algorithm", "natural language speech recognition", "speech recognition research" };
 			
 			for (String mode : analyzeModes) {
 				System.out.println("analyze mode: " + mode);
