@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.stream.Collectors;
 
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -140,7 +141,7 @@ public class LuceneSearchApp_group9 {
 		return config;
 	}
 	
-	public List<String> search(String searchQuery, IndexWriterConfig cf) throws IOException, ParseException {
+	public List<Document> search(String searchQuery, IndexWriterConfig cf) throws IOException, ParseException {
 		// Print search query
 		System.out.println("searchQuery: " + searchQuery);
 		
@@ -160,7 +161,7 @@ public class LuceneSearchApp_group9 {
 		booleanQuery.add(new TermQuery(new Term("search_task_number", "9")), BooleanClause.Occur.MUST);
 		booleanQuery.add(stemmedQuery, BooleanClause.Occur.MUST);
 		
-		List<String> results = new LinkedList<String>();
+		List<Document> documents = new LinkedList<Document>();
 
 		// Run Lucene search
 		DirectoryReader ireader = DirectoryReader.open(FSDirectory.open(Paths.get("index")));
@@ -174,37 +175,32 @@ public class LuceneSearchApp_group9 {
 		
 		totalRelevantDocuments = 0;
 		
-		// Save the results
+		// Transform search results into Document objects list
 		for (ScoreDoc aDoc : scoredDocuments) {
-			Document d = isearcher.doc(aDoc.doc);
-			results.add("score: " + aDoc.score + " | relevance: " + d.get("relevance") + " | title: " + d.get("title") + " | abstractText: " + d.get("abstractText"));
+			Document document = isearcher.doc(aDoc.doc);
+			documents.add(document);
+			//System.out.println("score: " + aDoc.score + " | relevance: " + document.get("relevance") + " | title: " + document.get("title") + " | abstractText: " + document.get("abstractText"));
 
-			if (d.get("relevance").equals("1")) {
+			if (document.get("relevance").equals("1")) {
 				totalRelevantDocuments++;
 			}
 		}
 
-		System.out.println("result number of total docs: " + totalRelevantDocuments);
-
-		List<Point2D> precisionRecall = getPrecisionRecall(isearcher, scoredDocuments);
-		List<Point2D> precisionRecallInterpolated = getPrecisionRecallInterpolated(precisionRecall);
-		List<Point2D> precisionRecallElevenPointAverage = getPrecisionRecallElevenPointAverage(precisionRecallInterpolated);
-
-		printPrecisionRecall(precisionRecallElevenPointAverage);
+		//System.out.println("result number of total docs: " + totalRelevantDocuments);
 		
 		ireader.close();
-		return results;
+		return documents;
 	}
 	
-	public List<Point2D> getPrecisionRecall(IndexSearcher isearcher, ScoreDoc[] scoredDocuments) throws IOException {
+	public List<Point2D> getPrecisionRecall(List<Document> documents) throws IOException {
 		int relevantDocumentsResult = 0;
 		int nonRelevantDocumentsResult = 0;
 		List<Point2D> precisionRecall = new LinkedList<Point2D>();
 
 		//System.out.println("R\tP");
 		
-		for (ScoreDoc aDoc : scoredDocuments) {
-			if (isearcher.doc(aDoc.doc).get("relevance").equals("1")) {
+		for (Document document : documents) {
+			if (document.get("relevance").equals("1")) {
 				relevantDocumentsResult++;
 			} else {
 				nonRelevantDocumentsResult++;
@@ -237,8 +233,8 @@ public class LuceneSearchApp_group9 {
 		return precisionRecallInterpolated;
 	}
 	
-	public List<Point2D> getPrecisionRecallElevenPointAverage(List<Point2D> precisionRecallInterpolated) {
-		List<Point2D> precisionRecallElevenPointAverage = new LinkedList<>();
+	public List<Point2D> getPrecisionRecallElevenPoints(List<Point2D> precisionRecallInterpolated) {
+		List<Point2D> precisionRecallElevenPoints = new LinkedList<>();
 		Iterator<Point2D> iterator = precisionRecallInterpolated.iterator();
 		
 		Point2D point = iterator.next();
@@ -248,14 +244,33 @@ public class LuceneSearchApp_group9 {
 
 			if (point.getX() >= x || !iterator.hasNext()) {
 				Point2D averagePoint = new Point2D.Double(x, point.getY());
-				precisionRecallElevenPointAverage.add(averagePoint);
+				precisionRecallElevenPoints.add(averagePoint);
 				i++;
 			} else {
 				point = iterator.next();
 			}
 		}
 		
-		return precisionRecallElevenPointAverage;
+		return precisionRecallElevenPoints;
+	}
+	
+	public List<Point2D> getPrecisionRecallElevenPointsAverage(List<List<Point2D>> PrecisionRecallElevenPoints) {
+		List<Point2D> precisionRecallElevenPointsAverage = new LinkedList<Point2D>();
+		
+		for (int i = 0; i < 11; i++) {
+			int index = i;
+			double sum = PrecisionRecallElevenPoints.stream()
+					.mapToDouble(list -> list.get(index).getY())
+					.sum();
+			
+			double recall = PrecisionRecallElevenPoints.get(0).get(i).getX();
+			double precision = sum / PrecisionRecallElevenPoints.size();
+			
+			Point2D point = new Point2D.Double(recall, precision);
+			precisionRecallElevenPointsAverage.add(point);
+		}
+		
+		return precisionRecallElevenPointsAverage;
 	}
 	
 	public void printPrecisionRecall(List<Point2D> precisionRecall) {
@@ -266,18 +281,24 @@ public class LuceneSearchApp_group9 {
 			System.out.println(formatter.format(point.getX()) + "\t" + formatter.format(point.getY()));
 		}
 	}
-		
-	public void printResults(List<String> results) {
-		if (results.size() > 0) {
-			Collections.sort(results);
-			for (int i=0; i<results.size(); i++) {
-				System.out.println(" " + (i+1) + ". " + results.get(i));
+	
+	public void printPrecisionRecallForQuery(List<List<Point2D>> precisionRecallQuery) {
+		System.out.println("R\tP1\tP2\tP3\tP avg");
+
+		for (int i = 0; i < precisionRecallQuery.get(0).size(); i++) {
+			DecimalFormat formatter = new DecimalFormat("#0.0000");
+			StringBuilder stringBuiler = new StringBuilder();
+			
+			stringBuiler.append(precisionRecallQuery.get(0).get(i).getX() + "\t");
+			for (List<Point2D> precisionRecall : precisionRecallQuery) {
+				Point2D point = precisionRecall.get(i);
+				stringBuiler.append(formatter.format(point.getY()) + "\t");
 			}
-		} else {
-			System.out.println(" no results");
+			
+			System.out.println(stringBuiler.toString());
 		}
 	}
-	
+
 	public static void main(String[] args) throws IOException, ParseException {
 		if (args.length > 0) {
 			LuceneSearchApp_group9 engine = new LuceneSearchApp_group9();
@@ -293,15 +314,23 @@ public class LuceneSearchApp_group9 {
 			for (String mode : analyzeModes) {
 				System.out.println("analyze mode: " + mode);
 				IndexWriterConfig cf = engine.index(docs, mode);
+				List<List<Point2D>> precisionRecallElevenPointsForQuery = new LinkedList<>();
 				
 				for (String query : queryset) {
-					List<String> results;
-					results = engine.search(query, cf);
-					
-					// Display the results (disabled for output)
-					// engine.printResults(results);
+					List<Document> documents = engine.search(query, cf);
+
+					List<Point2D> precisionRecall = engine.getPrecisionRecall(documents);
+					List<Point2D> precisionRecallInterpolated = engine.getPrecisionRecallInterpolated(precisionRecall);
+					List<Point2D> precisionRecallElevenPoints = engine.getPrecisionRecallElevenPoints(precisionRecallInterpolated);
+
+					precisionRecallElevenPointsForQuery.add(precisionRecallElevenPoints);
 					
 				}
+				
+				List<Point2D> precisionRecallElevenPointsCombined = engine.getPrecisionRecallElevenPointsAverage(precisionRecallElevenPointsForQuery);
+				precisionRecallElevenPointsForQuery.add(precisionRecallElevenPointsCombined);
+				
+				engine.printPrecisionRecallForQuery(precisionRecallElevenPointsForQuery);
 				
 				System.out.println("");
 			}
