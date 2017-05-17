@@ -283,7 +283,7 @@ public class LuceneSearchApp_group9 {
 	}
 	
 	public void printPrecisionRecallForQuery(List<List<Point2D>> precisionRecallQuery) {
-		System.out.println("R\tP1\tP2\tP3\tP avg");
+		//System.out.println("R\tP1\tP2\tP3\tP avg");
 
 		for (int i = 0; i < precisionRecallQuery.get(0).size(); i++) {
 			DecimalFormat formatter = new DecimalFormat("#0.0000");
@@ -309,7 +309,9 @@ public class LuceneSearchApp_group9 {
 			List<DocumentInCollection> docs = parser.getDocuments();
 
 			// testing query for stemming and stopwords (test with => corpus_part2_test.xml)
-			String[] queryset = { "speech recognition algorithm", "natural language speech recognition", "speech recognition research" };
+			String[] queryset = { "speech recognition algorithm", "natural language speech recognition", "the researching of a speech recognizer", "the algorithm of a language recognition" };
+			
+			List<List<Point2D>> precisionRecallElevenPointsTotal = new LinkedList<>();
 			
 			for (String mode : analyzeModes) {
 				System.out.println("analyze mode: " + mode);
@@ -328,12 +330,13 @@ public class LuceneSearchApp_group9 {
 				}
 				
 				List<Point2D> precisionRecallElevenPointsCombined = engine.getPrecisionRecallElevenPointsAverage(precisionRecallElevenPointsForQuery);
-				precisionRecallElevenPointsForQuery.add(precisionRecallElevenPointsCombined);
-				
-				engine.printPrecisionRecallForQuery(precisionRecallElevenPointsForQuery);
+				precisionRecallElevenPointsForQuery.clear();
+				precisionRecallElevenPointsTotal.add(precisionRecallElevenPointsCombined);
 				
 				System.out.println("");
 			}
+			
+			engine.printPrecisionRecallForQuery(precisionRecallElevenPointsTotal);
 
 			
 		} else {
